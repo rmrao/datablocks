@@ -33,7 +33,9 @@ def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index) -
         else:
             return "".join(obj[i] for i in index)
     elif isinstance(obj, list):
-        raise NotImplementedError("Sequential slicing not implemented for list datatypes")
+        raise NotImplementedError(
+            "Sequential slicing not implemented for list datatypes"
+        )
     else:
         if isinstance(index, int):
             index = [

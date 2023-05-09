@@ -50,7 +50,9 @@ class _StringTensorDim0:
 @dataclass(frozen=True)
 class _StringTensorDimNeg1:
     string_item: str = field(default="abcde", metadata={"dim": -1})
-    tensor_item: torch.Tensor = field(default=torch.arange(10).view(2, 5), metadata={"dim": -1})
+    tensor_item: torch.Tensor = field(
+        default=torch.arange(10).view(2, 5), metadata={"dim": -1}
+    )
 
 
 @datablock

@@ -15,7 +15,10 @@ def datablock(cls):
 
         @dataclasses.dataclass(frozen=True)
         class _Datablock(
-            TensorlikeDatablockMixin, SequentialDatablockMixin, CollateDatablockMixin, cls
+            TensorlikeDatablockMixin,
+            SequentialDatablockMixin,
+            CollateDatablockMixin,
+            cls,
         ):
             def __repr__(self):
                 info = ",".join(
@@ -23,9 +26,7 @@ def datablock(cls):
                     for key, value in vars(self).items()
                     if key not in ("_device", "_dtype")
                 )
-                return (
-                    f"{self.__class__.__name__}({info}, dtype={self.dtype}, device={self.device})"
-                )
+                return f"{self.__class__.__name__}({info}, dtype={self.dtype}, device={self.device})"
 
         _Datablock.__module__ = cls.__module__
         _Datablock.__name__ = cls.__name__

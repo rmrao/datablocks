@@ -3,7 +3,12 @@ import typing as T
 
 import torch
 
-FLOAT_DTYPES: T.Set[torch.dtype] = {torch.float16, torch.float32, torch.float64, torch.bfloat16}
+FLOAT_DTYPES: T.Set[torch.dtype] = {
+    torch.float16,
+    torch.float32,
+    torch.float64,
+    torch.bfloat16,
+}
 V = T.TypeVar("V")
 
 
@@ -75,7 +80,9 @@ class TensorlikeDatablockMixin:
         device = torch.device(device)
         if device.type == "cpu":
             raise ValueError("Received device 'cpu' for in method .cuda()")
-        return self.to(device=device, non_blocking=non_blocking, memory_format=memory_format)
+        return self.to(
+            device=device, non_blocking=non_blocking, memory_format=memory_format
+        )
 
     def cpu(self, memory_format=torch.preserve_format):
         device = torch.device("cpu")

@@ -6,7 +6,9 @@ import torch
 
 
 def collate_dense_tensors(
-    sequences: T.Sequence[torch.Tensor], constant_value: T.Union[int, float] = 0, dtype=None
+    sequences: T.Sequence[torch.Tensor],
+    constant_value: T.Union[int, float] = 0,
+    dtype=None,
 ) -> torch.Tensor:
     batch_size = len(sequences)
     shape = [batch_size] + np.max([seq.shape for seq in sequences], 0).tolist()
@@ -38,7 +40,9 @@ class CollateDatablockMixin:
         batch_size = len(states)
 
         new_state = {
-            key: cls.merge(states, key) for key in states[0].keys() if key != "batch_size"
+            key: cls.merge(states, key)
+            for key in states[0].keys()
+            if key != "batch_size"
         }
 
         return cls(**new_state, batch_size=batch_size)
