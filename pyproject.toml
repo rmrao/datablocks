@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "datablocks"
+version = "0.1.0"
+description = "Simple, Composable, PyTorch Friendly data types"
+authors = ["Roshan Rao <rrao1394@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.0.1"
+numpy = "^1.24.3"
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+pytest-xdist = "^3.2.1"
+pytest-cov = "^4.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

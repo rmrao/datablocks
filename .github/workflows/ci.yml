@@ -1,0 +1,64 @@
+name: Tests
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Poetry Action
+      uses: snok/install-poetry@v1.3.3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x' # replace with your desired Python version
+        cache: 'poetry'  # caches poetry virtual env so that packages don't have to be reinstalled.
+
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.in-project false
+        poetry install --with dev --no-interaction
+
+    - name: Run tests
+      run: poetry run pytest --cov-report term-missing:skip-covered --junitxml=pytest.xml --cov datablocks -n 4 | tee pytest-coverage.txt
+
+    # Next two steps adds a comment to any PR that reports tests + code coverage.
+    - name: Pytest Coverage Comment
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: MishaKav/pytest-coverage-comment@v1.1.47
+      id: coverageComment
+      with:
+        title: Coverage Report
+        pytest-coverage-path: pytest-coverage.txt
+        junitxml-path: pytest.xml
+
+    - name: Pytest coverage GitHub summary
+      if: ${{ github.event_name == 'pull_request' }}
+      run: |
+        echo '${{ steps.coverageComment.outputs.coverageHtml }}' >> $GITHUB_STEP_SUMMARY
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Check code formatting 
+      uses: psf/black@stable
+      with:
+        options: "--check --verbose"
+
