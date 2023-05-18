@@ -20,7 +20,9 @@ def _get_ndim(obj: T.Any) -> int:
         raise ValueError(f"Failed to compute number of dimensions for object: {obj}")
 
 
-def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index, batched: bool = False) -> V:
+def _index_object(
+    obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index, batched: bool = False
+) -> V:
     if isinstance(obj, SequentialDatablockMixin):
         return obj[index]
 
@@ -83,5 +85,7 @@ class SequentialDatablockMixin:
         for key, value in state.items():
             if dims[key] is None and not isinstance(value, SequentialDatablockMixin):
                 continue
-            newstate[key] = _index_object(value, dims[key], index, batched=getattr(self, "batch_size", 0) > 0)
+            newstate[key] = _index_object(
+                value, dims[key], index, batched=getattr(self, "batch_size", 0) > 0
+            )
         return dataclasses.replace(self, **newstate)
