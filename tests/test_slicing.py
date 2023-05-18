@@ -1,5 +1,6 @@
 import typing as T
 from dataclasses import dataclass, field
+from functools import partial
 
 import pytest
 import torch
@@ -63,8 +64,22 @@ indices = [
 
 
 ITEMS = {
-    "none": [_StringTensor(), _StringTensor.collate([_StringTensor(), _StringTensor()])],
+    "none": [
+        _StringTensor(),
+        _StringTensor.collate([_StringTensor(), _StringTensor()]),
+    ],
 }
+
+
+def _collate(flag: bool, n: int, value):
+    if not flag:
+        return value
+    if isinstance(value, str):
+        return [value for _ in range(n)]
+    elif isinstance(value, torch.Tensor):
+        return value.unsqueeze(0).repeat(n, *([1] * value.dim()))
+    else:
+        raise TypeError(type(value))
 
 
 @pytest.mark.parametrize("collate", [False, True])
@@ -83,20 +98,22 @@ def test_slice_posdim(collate: bool):
     if collate:
         data = _StringTensorDim0.collate([data, data])
     sliced = data[:3]
-    assert sliced.string_item == "abc"
-    assert torch.all(sliced.tensor_item == torch.tensor([0, 1, 2]))
+
+    col = partial(_collate, collate, 2)
+    assert sliced.string_item == col("abc")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([0, 1, 2])))
 
     sliced = data[2]
-    assert sliced.string_item == "c"
-    assert torch.all(sliced.tensor_item == torch.tensor([2]))
+    assert sliced.string_item == col("c")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([2])))
 
     sliced = data[[0, 1, 3]]
-    assert sliced.string_item == "abd"
-    assert torch.all(sliced.tensor_item == torch.tensor([0, 1, 3]))
+    assert sliced.string_item == col("abd")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([0, 1, 3])))
 
     sliced = data[-2:]
-    assert sliced.string_item == "de"
-    assert torch.all(sliced.tensor_item == torch.tensor([3, 4]))
+    assert sliced.string_item == col("de")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([3, 4])))
 
 
 @pytest.mark.parametrize("collate", [False, True])
@@ -105,20 +122,21 @@ def test_slice_negdim(collate: bool):
     if collate:
         data = _StringTensorDimNeg1.collate([data, data])
     sliced = data[:3]
-    assert sliced.string_item == "abc"
-    assert torch.all(sliced.tensor_item == torch.tensor([[0, 1, 2], [5, 6, 7]]))
+    col = partial(_collate, collate, 2)
+    assert sliced.string_item == col("abc")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([[0, 1, 2], [5, 6, 7]])))
 
     sliced = data[2]
-    assert sliced.string_item == "c"
-    assert torch.all(sliced.tensor_item == torch.tensor([[2], [7]]))
+    assert sliced.string_item == col("c")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([[2], [7]])))
 
     sliced = data[[0, 1, 3]]
-    assert sliced.string_item == "abd"
-    assert torch.all(sliced.tensor_item == torch.tensor([[0, 1, 3], [5, 6, 8]]))
+    assert sliced.string_item == col("abd")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([[0, 1, 3], [5, 6, 8]])))
 
     sliced = data[-2:]
-    assert sliced.string_item == "de"
-    assert torch.all(sliced.tensor_item == torch.tensor([[3, 4], [8, 9]]))
+    assert sliced.string_item == col("de")
+    assert torch.all(sliced.tensor_item == col(torch.tensor([[3, 4], [8, 9]])))
 
 
 @pytest.mark.parametrize("collate", [False, True])
@@ -127,65 +145,74 @@ def test_slice_multdim(collate: bool):
     if collate:
         data = _StringTensorMultidim.collate([data, data])
     sliced = data[:3]
-    assert sliced.string_item == "abc"
+    col = partial(_collate, collate, 2)
+    assert sliced.string_item == col("abc")
     assert torch.all(
         sliced.tensor_item
-        == torch.tensor(
-            [
-                [[0, 1, 2], [5, 6, 7], [10, 11, 12]],
+        == col(
+            torch.tensor(
                 [
-                    [25, 26, 27],
-                    [30, 31, 32],
-                    [35, 36, 37],
-                ],
-            ]
+                    [[0, 1, 2], [5, 6, 7], [10, 11, 12]],
+                    [
+                        [25, 26, 27],
+                        [30, 31, 32],
+                        [35, 36, 37],
+                    ],
+                ]
+            )
         )
     )
 
     sliced = data[2]
-    assert sliced.string_item == "c"
+    assert sliced.string_item == col("c")
     assert torch.all(
         sliced.tensor_item
-        == torch.tensor(
-            [
-                [[12]],
+        == col(
+            torch.tensor(
                 [
-                    [37],
-                ],
-            ]
+                    [[12]],
+                    [
+                        [37],
+                    ],
+                ]
+            )
         )
     )
 
     sliced = data[[0, 1, 3]]
-    assert sliced.string_item == "abd"
+    assert sliced.string_item == col("abd")
     assert torch.all(
         sliced.tensor_item
-        == torch.tensor(
-            [
-                [[0, 1, 3], [5, 6, 8], [15, 16, 18]],
+        == col(
+            torch.tensor(
                 [
-                    [25, 26, 28],
-                    [30, 31, 33],
-                    [40, 41, 43],
-                ],
-            ]
+                    [[0, 1, 3], [5, 6, 8], [15, 16, 18]],
+                    [
+                        [25, 26, 28],
+                        [30, 31, 33],
+                        [40, 41, 43],
+                    ],
+                ]
+            )
         )
     )
 
     sliced = data[-2:]
-    assert sliced.string_item == "de"
+    assert sliced.string_item == col("de")
     assert torch.all(
         sliced.tensor_item
-        == torch.tensor(
-            [
+        == col(
+            torch.tensor(
                 [
-                    [18, 19],
-                    [23, 24],
-                ],
-                [
-                    [43, 44],
-                    [48, 49],
-                ],
-            ]
+                    [
+                        [18, 19],
+                        [23, 24],
+                    ],
+                    [
+                        [43, 44],
+                        [48, 49],
+                    ],
+                ]
+            )
         )
     )

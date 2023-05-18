@@ -20,13 +20,16 @@ def _get_ndim(obj: T.Any) -> int:
         raise ValueError(f"Failed to compute number of dimensions for object: {obj}")
 
 
-def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index) -> V:
+def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index, batched: bool = False) -> V:
+    if isinstance(obj, SequentialDatablockMixin):
+        return obj[index]
+
     if isinstance(dims, int):
         dims = (dims,)
+    if batched:
+        dims = tuple(d + 1 if (batched and d >= 0) else d for d in dims)
 
-    if isinstance(obj, SequentialDatablockMixin):
-        obj = obj[index]
-    elif isinstance(obj, str):
+    if isinstance(obj, str):
         assert (len(dims) == 1) and dims[0] in (0, -1), dims
         if isinstance(index, (int, slice)):
             obj = obj[index]
@@ -49,7 +52,8 @@ def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index) -
                 obj = [obj[i] for i in index]
         dims = tuple(d - 1 if d > 0 else d for d in dims if d not in (0, -ndim))
         if dims:
-            obj = [_index_object(v, dims, index) for v in obj]
+            # No need to pass batched here again, it's taken care of by the first call
+            obj = [_index_object(v, dims, index, batched=False) for v in obj]
     else:
         if isinstance(index, int):
             # this ensures the dimension stays and is set to 1 rather than reducing the dimension
@@ -77,7 +81,7 @@ class SequentialDatablockMixin:
         }
         newstate = {}
         for key, value in state.items():
-            if dims[key] is None:
+            if dims[key] is None and not isinstance(value, SequentialDatablockMixin):
                 continue
-            newstate[key] = _index_object(value, dims[key], index)
+            newstate[key] = _index_object(value, dims[key], index, batched=getattr(self, "batch_size", 0) > 0)
         return dataclasses.replace(self, **newstate)
