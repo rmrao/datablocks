@@ -20,27 +20,46 @@ def _get_ndim(obj: T.Any) -> int:
         raise ValueError(f"Failed to compute number of dimensions for object: {obj}")
 
 
-def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index) -> V:
-    if isinstance(dims, int):
-        dims = (dims,)
-
+def _index_object(
+    obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index, batched: bool = False
+) -> V:
     if isinstance(obj, SequentialDatablockMixin):
         return obj[index]
-    elif isinstance(obj, str):
-        assert len(dims) == 1, dims
+
+    if isinstance(dims, int):
+        dims = (dims,)
+    if batched:
+        dims = tuple(d + 1 if (batched and d >= 0) else d for d in dims)
+
+    if isinstance(obj, str):
+        assert (len(dims) == 1) and dims[0] in (0, -1), dims
         if isinstance(index, (int, slice)):
-            return obj[index]
+            obj = obj[index]
         else:
-            return "".join(obj[i] for i in index)
+            obj = "".join(obj[i] for i in index)
     elif isinstance(obj, list):
-        raise NotImplementedError(
-            "Sequential slicing not implemented for list datatypes"
-        )
+        ndim = _get_ndim(obj)
+        if max(dims) >= ndim or min(dims) < -ndim:
+            raise ValueError(
+                f"Received invalid dimension for list with ndim {ndim}, {dims}"
+            )
+        if isinstance(index, int):
+            # this ensures the dimension stays and is set to 1 rather than reducing the dimension
+            index = [index]
+
+        if 0 in dims or -ndim in dims:
+            if isinstance(index, slice):
+                obj = obj[index]
+            else:
+                obj = [obj[i] for i in index]
+        dims = tuple(d - 1 if d > 0 else d for d in dims if d not in (0, -ndim))
+        if dims:
+            # No need to pass batched here again, it's taken care of by the first call
+            obj = [_index_object(v, dims, index, batched=False) for v in obj]
     else:
         if isinstance(index, int):
-            index = [
-                index
-            ]  # this ensures the dimension stays and is set to 1 rather than reducing the dimension
+            # this ensures the dimension stays and is set to 1 rather than reducing the dimension
+            index = [index]
         ndim = _get_ndim(obj)
         for d in dims:
             # Note (rmrao): This construction is strange, but I think required. First, build
@@ -52,7 +71,7 @@ def _index_object(obj: V, dims: T.Union[int, T.Tuple[int, ...]], index: Index) -
             indices: T.List[Index] = [slice(None) for _ in range(ndim)]
             indices[d] = index
             obj = obj[tuple(indices)]
-        return obj
+    return obj
 
 
 @dataclasses.dataclass(frozen=True)
@@ -64,7 +83,9 @@ class SequentialDatablockMixin:
         }
         newstate = {}
         for key, value in state.items():
-            if dims[key] is None:
+            if dims[key] is None and not isinstance(value, SequentialDatablockMixin):
                 continue
-            newstate[key] = _index_object(value, dims[key], index)
+            newstate[key] = _index_object(
+                value, dims[key], index, batched=getattr(self, "batch_size", 0) > 0
+            )
         return dataclasses.replace(self, **newstate)
