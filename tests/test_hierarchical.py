@@ -5,21 +5,19 @@ from functools import partial
 import pytest
 import torch
 
-from datablocks import datablock
+from datablocks import Datablock
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorDimNeg1:
+@dataclass(frozen=True, repr=False)
+class _StringTensorDimNeg1(Datablock):
     string_item: str = field(default="abcde", metadata={"dim": -1})
     tensor_item: torch.Tensor = field(
         default=torch.arange(10).view(2, 5), metadata={"dim": -1}
     )
 
 
-@datablock
-@dataclass(frozen=True)
-class _HierarchicalStringTensor:
+@dataclass(frozen=True, repr=False)
+class _HierarchicalStringTensor(Datablock):
     block: _StringTensorDimNeg1 = field(default_factory=_StringTensorDimNeg1)
     string_item: str = field(default="abcde", metadata={"dim": -1})
     tensor_item: torch.Tensor = field(

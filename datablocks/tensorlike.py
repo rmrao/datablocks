@@ -12,7 +12,7 @@ FLOAT_DTYPES: T.Set[torch.dtype] = {
 V = T.TypeVar("V")
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class TensorlikeDatablockMixin:
     _device: T.Optional[torch.device] = None
     _dtype: T.Optional[torch.dtype] = None

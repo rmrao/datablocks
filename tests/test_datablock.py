@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import pytest
 import torch
 
-from datablocks import datablock
+from datablocks import Datablock
 
 """
 TODO:
@@ -20,16 +20,14 @@ TODO:
 """
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensor:
+@dataclass(frozen=True, repr=False)
+class _StringTensor(Datablock):
     string_item: str = "test"
     tensor_item: torch.Tensor = torch.zeros([3])
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorPad1:
+@dataclass(frozen=True, repr=False)
+class _StringTensorPad1(Datablock):
     string_item: str = "test"
     tensor_item: torch.Tensor = field(default=torch.zeros([3]), metadata={"pad": 1})
 
@@ -111,6 +109,22 @@ def test_shift_device(data):
     assert cpu.tensor_item.device.type == "cpu"
     assert cuda.tensor_item.device.type == "cuda"
     assert torch.all(cpu.tensor_item == cuda.tensor_item.cpu())
+
+
+def test_repr_unbatched():
+    data = DATA
+    assert (
+        repr(data)
+        == "_StringTensor(string_item=test, tensor_item=tensor([0., 0., 0.]), dtype=torch.float32, device=cpu)"
+    )
+
+
+def test_repr_batched():
+    data = BATCH
+    assert repr(data) == (
+        "_StringTensor(string_item=['test', 'test'], tensor_item=tensor([[0., 0., 0.],\n        [0., 0., 0.]]), "
+        "batch_size=2, dtype=torch.float32, device=cpu)"
+    )
 
 
 def test_collate():

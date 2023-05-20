@@ -5,42 +5,37 @@ from functools import partial
 import pytest
 import torch
 
-from datablocks import datablock
+from datablocks import Datablock
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensor:
+@dataclass(frozen=True, repr=False)
+class _StringTensor(Datablock):
     string_item: str = "test"
     tensor_item: torch.Tensor = torch.zeros([3])
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorPad1:
+@dataclass(frozen=True, repr=False)
+class _StringTensorPad1(Datablock):
     string_item: str = "test"
     tensor_item: torch.Tensor = field(default=torch.zeros([3]), metadata={"pad": 1})
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorDim0:
+@dataclass(frozen=True, repr=False)
+class _StringTensorDim0(Datablock):
     string_item: str = field(default="abcde", metadata={"dim": 0})
     tensor_item: torch.Tensor = field(default=torch.arange(5), metadata={"dim": 0})
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorDimNeg1:
+@dataclass(frozen=True, repr=False)
+class _StringTensorDimNeg1(Datablock):
     string_item: str = field(default="abcde", metadata={"dim": -1})
     tensor_item: torch.Tensor = field(
         default=torch.arange(10).view(2, 5), metadata={"dim": -1}
     )
 
 
-@datablock
-@dataclass(frozen=True)
-class _StringTensorMultidim:
+@dataclass(frozen=True, repr=False)
+class _StringTensorMultidim(Datablock):
     string_item: str = field(default="abcde", metadata={"dim": -1})
     tensor_item: torch.Tensor = field(
         default=torch.arange(50).view(2, 5, 5), metadata={"dim": (-1, -2)}
