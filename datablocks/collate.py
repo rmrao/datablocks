@@ -4,6 +4,8 @@ import typing as T
 import numpy as np
 import torch
 
+from .utils import fields_dict
+
 
 def collate_dense_tensors(
     sequences: T.Sequence[torch.Tensor],
@@ -26,7 +28,7 @@ def collate_dense_tensors(
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class CollateDatablockMixin:
-    batch_size: int = 0
+    batch_size: int = dataclasses.field(default=0, repr=False)
 
     @classmethod
     def collate(cls, samples: T.Sequence["CollateDatablockMixin"]):
@@ -35,8 +37,7 @@ class CollateDatablockMixin:
                 raise ValueError(
                     "Received sample with batch size != 0, cannot batch already batched items"
                 )
-
-        states = [vars(sample) for sample in samples]
+        states = [fields_dict(sample, init=False) for sample in samples]
         batch_size = len(states)
 
         new_state = {

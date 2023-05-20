@@ -1,4 +1,4 @@
-# Simple, Composable, Torch-Friendly Data Structures
+# Simple, Composable, Torch-Friendly Data bars
 
 ## Idea
 
@@ -15,12 +15,9 @@ net.to(dtype, device)
 allow the user to think of a network as a single object which can be altered, rather than as a series of smaller objects
 that must be moved individually.
 
-However, a similar interface does not exist for datatypes. We often want to keep track of multiple related pieces of information about a single
-example. Even for the simple case of a protein sequence, we may want to keep track of the `id` (string data), `sequence` (string data), and
-`tensor` (int64 tensor data corresponding to encoded sequence).
+However, a similar interface does not exist for datatypes. We often want to keep track of multiple related pieces of information about a single example, such as an class of an image, bounding boxes, or the unencoded string text paired with the encoded + tokenized int64 indices.
 
-More complicated objects, such as protein structures, require more than a dozen related sub-components. There are also a number of operations that
-must take into account all subcomponents, including:
+There are also a number of operations that must take into account all subcomponents, including:
 
 - Moving to/from devices
 - Changing dtype
@@ -40,39 +37,40 @@ We want a method that supports all of:
 - Changing dtype
 - Slicing
 - Collating
+- Lazy properties
 
 in an intuitive, user-friendly manner. Additionally, like PyTorch modules, datatypes should be composable.
 
 ## Datablocks
 
-This module defines the `Datablock` class, which can turn any frozen dataclass into a composable, torch-friendly datastructure. Example:
+This module defines the `Datablock` class, which can turn any frozen dataclass into a composable, torch-friendly databar. Example:
 
 ```python
 @dataclass(frozen=True, repr=False)
-class ProteinSequence(Datablock):
+class Foo(Datablock):
     id: str
     sequence: str = field(metadata={"dim": -1})  # indicate the dimension along which slicing should occur
-    tensor: torch.Tensor = field(metadata={"pad": 1, "dim": -1})  # indicate the dimension for slicing and the pad value for collating
+    tensor: torch.Tensor = field(metadata={"pad": -1, "dim": -1})  # indicate the dimension for slicing and the pad value for collating
 
     @classmethod
-    def from_sequence(cls, sequence: str, alphabet: Alphabet, id: T.Optional[str] = None):
-        tensor = torch.tensor(alphabet.encode(sequence), dtype=torch.int64)
-        if id is None:
-            id = ""
+    def from_sequence(cls, id: str, sequence: str):
+        tensor = torch.tensor(encode(sequence), dtype=torch.int64)
         return cls(id=id, sequence=sequence, tensor=tensor)
 ```
 
-Now we can create a sequence and operate on it in various ways
+Now we can create a Foo and operate on it in various ways
 
 ```python
+>>> import string
+>>> encode = lambda x: torch.tensor([string.ascii_uppercase.index(tok] for tok in x], dtype=torch.int64)
 >>> header = "test"
->>> seq = "MANLFKLGAE"
->>> sequence = ProteinSequence.from_sequence(seq, alphabet, id=header)
->>> sequence
-ProteinSequence(
+>>> seq = "ABCDE"
+>>> foo = Foo.from_sequence(id, seq)
+>>> foo
+Foo(
     id=test,
-    sequence=MANLFKLGAE,
-    tensor=tensor([20, 5, 17,  4, 18, 15, 4, 6, 5, 9]),
+    sequence=ABCDE,
+    tensor=tensor([0, 1, 2, 3, 4]),
     batch_size=0,
     dtype=torch.float32,
     device=cpu,
@@ -82,22 +80,22 @@ ProteinSequence(
 #### Slicing
 
 ```python
->>> sequence[:2]
-ProteinSequence(
+>>> foo[:2]
+Foo(
     id=test,
-    sequence=MA,
-    tensor=tensor([20, 5]),
+    sequence=AB,
+    tensor=tensor([0, 1]),
     batch_size=0,
     dtype=torch.float32,
     device=cpu,
 )
 
 # Lists will work, along with numpy arrays, torch tensors, negative indexing, etc.
->>> sequence[[0, 1, 8, 9]]
-ProteinSequence(
+>>> foo[[0, 1, 3]]
+Foo(
     id=test,
-    sequence=MAAE,
-    tensor=tensor([20, 5, 5, 9]),
+    sequence=ABD,
+    tensor=tensor([0, 1, 3]),
     batch_size=0,
     dtype=torch.float32,
     device=cpu,
@@ -107,11 +105,11 @@ ProteinSequence(
 #### Shift to cuda
 
 ```python
->>> sequence.cuda()
-ProteinSequence(
+>>> foo.cuda()
+Foo(
     id=test,
-    sequence=MANLFKLGAE,
-    tensor=tensor([20, 5, 17,  4, 18, 15, 4, 6, 5, 9], device="cuda:0"),
+    sequence=ABCDE,
+    tensor=tensor([0, 1, 2, 3, 4], device="cuda:0"),
     batch_size=0,
     dtype=torch.float32,
     device=cuda,
@@ -122,13 +120,13 @@ ProteinSequence(
 
 ```python
 # Moving to/from cuda and slicing will still work after collating
->>> ProteinSequence.collate([sequence[:2], sequence[2:]])
-ProteinSequence(
+>>> Foo.collate([foo[:2], foo[2:]])
+Foo(
     id=["test", "test"],
-    sequence=["MA", "NLFKLGAE"],
+    sequence=["AB", "CDE"],
     tensor=tensor(
-        [[20, 5, 1, 1, 1, 1, 1, 1]  # pad is automatically 1 b/c of metadata specified in declaration
-         [17, 4, 18, 15, 4, 6, 5, 9]]
+        [[0, 1, -1]  # pad is automatically -1 b/c of metadata specified in declaration
+         [2, 3, 4]]
     ),
     batch_size=2,
     dtype=torch.float32,
@@ -142,38 +140,74 @@ It's also possible to compose objects in a straightforward manner
 
 ```python
 @dataclass(frozen=True, repr=False)
-class ProteinStructure(Datablock):
-    sequence: ProteinSequence
-    coords: torch.Tensor = field(metadata={"dim": -3})
+class Bar(Datablock):
+    foo: Foo
+    baz: torch.Tensor = field(metadata={"dim": -1})
 
 
->>> structure = ProteinStructure(
-    sequence,
-    coords=torch.zeros([10, 3, 3]),  # e.g. to represent backbone coordinates
+>>> bar = Bar(
+    foo,
+    baz=torch.arange(5),
 )
 
 # All methods (slicing, move to/from device/dtype) will still work.
->>> structure[:2]
-ProteinStructure(
-    sequence=ProteinSequence(
+>>> bar[:2]
+Bar(
+    foo=Foo(
         id=test,
-        sequence=MA,
-        tensor=tensor([20, 5]),
+        sequence=AB,
+        tensor=tensor([0, 1]),
         batch_size=0,
         dtype=torch.float32,
         device=cpu,
     ),
-    coords=torch.tensor([
-        [[0, 0, 0],
-         [0, 0, 0],
-         [0, 0, 0]],
-        [[0, 0, 0],
-         [0, 0, 0],
-         [0, 0, 0]]
-    ]),
+    baz=torch.tensor([0, 1]),
     batch_size=0,
     dtype=torch.float32,
     device=cpu,
 )
 
+```
+
+### Lazy Properties
+
+Lazy properties allow the datablock to cache the computation of the property in the instance, so subsequent accesses are 
+inexpensive. The implementation is designed to throw away any computed lazy properties when a transform is applied (e.g.
+slicing, move to cuda, datatype shift, collating). This is to prevent cases where the computed property will no longer be valid
+for the new object. If you want support for these transformations, consider making the attribute a standard member of the dataclass.
+
+Lazy properties are useful if you have a property that meets the following conditions:
+
+- Can be derived from the other attributes in the dataclass
+- Does not need to be computed for every instance of the dataclass
+- Relatively expensive to compute
+- Does not need to benefit from other datablock transformations!
+
+To define a lazy property, use the `lazyproperty` decorator:
+
+```python
+import time
+import torch
+from dataclasses import dataclass
+from datablocks import Datablock, lazyproperty
+
+@dataclass(frozen=True, repr=False)
+class Lazy(Datablock):
+    a: torch.Tensor = torch.randn(3, 5)
+    @lazyproperty
+    def hello(self) -> str:
+        time.sleep(10)  # to mimic a long computation
+        return "world"
+```
+
+Now, accessing this property multiple times will show the speedup:
+```python
+>>> lazy = Lazy()
+>>> lazy.hello
+"world"  # 10 s
+>>> lazy.hello
+"world"  # <0.1 µs
+>>> lazy = lazy.cuda()
+>>> lazy.hello
+"world"  # 10 s, shift to cuda removes cache
 ```
