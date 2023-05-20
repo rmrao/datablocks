@@ -5,6 +5,8 @@ import typing as T
 import numpy as np
 import torch
 
+from .utils import fields_dict
+
 V = T.TypeVar("V")
 Index = T.Union[int, slice, T.Sequence[int], np.ndarray, torch.Tensor]
 
@@ -77,7 +79,7 @@ def _index_object(
 @dataclasses.dataclass(frozen=True)
 class SequentialDatablockMixin:
     def __getitem__(self, index: Index):
-        state = vars(self)
+        state = fields_dict(self, init=False)
         dims: T.Dict[str, T.Union[int, T.Tuple[int, ...]]] = {
             f.name: f.metadata.get("dim", None) for f in dataclasses.fields(self)
         }

@@ -3,6 +3,8 @@ import typing as T
 
 import torch
 
+from .utils import fields_dict
+
 FLOAT_DTYPES: T.Set[torch.dtype] = {
     torch.float16,
     torch.float32,
@@ -14,13 +16,13 @@ V = T.TypeVar("V")
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class TensorlikeDatablockMixin:
-    _device: T.Optional[torch.device] = None
-    _dtype: T.Optional[torch.dtype] = None
+    _device: T.Optional[torch.device] = dataclasses.field(default=None, repr=False)
+    _dtype: T.Optional[torch.dtype] = dataclasses.field(default=None, repr=False)
 
     @property
     def dtype(self) -> torch.dtype:
         if self._dtype is None:
-            for value in vars(self).values():
+            for value in fields_dict(self).values():
                 if isinstance(value, torch.Tensor) and value.dtype in FLOAT_DTYPES:
                     return value.dtype
             return torch.float32
@@ -29,7 +31,7 @@ class TensorlikeDatablockMixin:
     @property
     def device(self) -> torch.device:
         if self._device is None:
-            for value in vars(self).values():
+            for value in fields_dict(self).values():
                 if isinstance(value, torch.Tensor):
                     return value.device
             return torch.device("cpu")
@@ -65,7 +67,7 @@ class TensorlikeDatablockMixin:
             else:
                 return tensor.to(**kwargs)
 
-        state = vars(self)
+        state = fields_dict(self, init=False)
         state = {key: move_tensor(tensor) for key, tensor in state.items()}
         state["_device"] = device
         state["_dtype"] = dtype

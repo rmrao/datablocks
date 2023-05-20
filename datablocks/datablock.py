@@ -1,16 +1,20 @@
 from .collate import CollateDatablockMixin
 from .sequential import SequentialDatablockMixin
 from .tensorlike import TensorlikeDatablockMixin
+from .lazy import LazyDatablockMixin
+
+from .utils import fields_dict
 
 
 class Datablock(
-    TensorlikeDatablockMixin, SequentialDatablockMixin, CollateDatablockMixin
+    TensorlikeDatablockMixin,
+    SequentialDatablockMixin,
+    CollateDatablockMixin,
+    LazyDatablockMixin,
 ):
     def __repr__(self):
         info = ", ".join(
-            f"{key}={value}"
-            for key, value in vars(self).items()
-            if key not in ("_device", "_dtype", "batch_size")
+            f"{key}={value}" for key, value in fields_dict(self, repr=False).items()
         )
         if self.batch_size == 0:
             return f"{self.__class__.__name__}({info}, dtype={self.dtype}, device={self.device})"
