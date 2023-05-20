@@ -24,7 +24,7 @@ def collate_dense_tensors(
     return array
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class CollateDatablockMixin:
     batch_size: int = 0
 

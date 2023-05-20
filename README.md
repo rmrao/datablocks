@@ -45,12 +45,11 @@ in an intuitive, user-friendly manner. Additionally, like PyTorch modules, datat
 
 ## Datablocks
 
-This module defines the `datablock` decorator, which can turn any frozen dataclass into a composable, torch-friendly datastructure. Example:
+This module defines the `Datablock` class, which can turn any frozen dataclass into a composable, torch-friendly datastructure. Example:
 
 ```python
-@datablock
-@dataclass(frozen=True)
-class ProteinSequence:
+@dataclass(frozen=True, repr=False)
+class ProteinSequence(Datablock):
     id: str
     sequence: str = field(metadata={"dim": -1})  # indicate the dimension along which slicing should occur
     tensor: torch.Tensor = field(metadata={"pad": 1, "dim": -1})  # indicate the dimension for slicing and the pad value for collating
@@ -81,6 +80,7 @@ ProteinSequence(
 ```
 
 #### Slicing
+
 ```python
 >>> sequence[:2]
 ProteinSequence(
@@ -103,7 +103,9 @@ ProteinSequence(
     device=cpu,
 )
 ```
+
 #### Shift to cuda
+
 ```python
 >>> sequence.cuda()
 ProteinSequence(
@@ -115,9 +117,11 @@ ProteinSequence(
     device=cuda,
 )
 ```
+
 #### Collate
+
 ```python
-# Moving to/from cuda will still work after collating. Slicing is not fully implemented yet.
+# Moving to/from cuda and slicing will still work after collating
 >>> ProteinSequence.collate([sequence[:2], sequence[2:]])
 ProteinSequence(
     id=["test", "test"],
@@ -133,12 +137,12 @@ ProteinSequence(
 ```
 
 #### Composability
+
 It's also possible to compose objects in a straightforward manner
 
 ```python
-@datablock
-@dataclass(frozen=True)
-class ProteinStructure:
+@dataclass(frozen=True, repr=False)
+class ProteinStructure(Datablock):
     sequence: ProteinSequence
     coords: torch.Tensor = field(metadata={"dim": -3})
 
