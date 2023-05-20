@@ -3,16 +3,18 @@ from .sequential import SequentialDatablockMixin
 from .tensorlike import TensorlikeDatablockMixin
 from .lazy import LazyDatablockMixin
 
-from .utils import fields_dict 
+from .utils import fields_dict
 
 
 class Datablock(
-    TensorlikeDatablockMixin, SequentialDatablockMixin, CollateDatablockMixin, LazyDatablockMixin
+    TensorlikeDatablockMixin,
+    SequentialDatablockMixin,
+    CollateDatablockMixin,
+    LazyDatablockMixin,
 ):
     def __repr__(self):
         info = ", ".join(
-            f"{key}={value}"
-            for key, value in fields_dict(self, repr=False).items()
+            f"{key}={value}" for key, value in fields_dict(self, repr=False).items()
         )
         if self.batch_size == 0:
             return f"{self.__class__.__name__}({info}, dtype={self.dtype}, device={self.device})"
