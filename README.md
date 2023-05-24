@@ -37,7 +37,6 @@ We want a method that supports all of:
 - Changing dtype
 - Slicing
 - Collating
-- Lazy properties
 
 in an intuitive, user-friendly manner. Additionally, like PyTorch modules, datatypes should be composable.
 
@@ -171,30 +170,19 @@ Bar(
 
 ### Lazy Properties
 
-Lazy properties allow the datablock to cache the computation of the property in the instance, so subsequent accesses are 
-inexpensive. The implementation is designed to throw away any computed lazy properties when a transform is applied (e.g.
-slicing, move to cuda, datatype shift, collating). This is to prevent cases where the computed property will no longer be valid
-for the new object. If you want support for these transformations, consider making the attribute a standard member of the dataclass.
-
-Lazy properties are useful if you have a property that meets the following conditions:
-
-- Can be derived from the other attributes in the dataclass
-- Does not need to be computed for every instance of the dataclass
-- Relatively expensive to compute
-- Does not need to benefit from other datablock transformations!
-
-To define a lazy property, use the `lazyproperty` decorator:
+To define a lazy property, use the built in `functools.cached_property` decorator:
 
 ```python
 import time
 import torch
 from dataclasses import dataclass
-from datablocks import Datablock, lazyproperty
+import functools
+from datablocks import Datablock 
 
 @dataclass(frozen=True, repr=False)
 class Lazy(Datablock):
     a: torch.Tensor = torch.randn(3, 5)
-    @lazyproperty
+    @functools.cached_property
     def hello(self) -> str:
         time.sleep(10)  # to mimic a long computation
         return "world"

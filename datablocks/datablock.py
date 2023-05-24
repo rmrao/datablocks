@@ -1,7 +1,6 @@
 from .collate import CollateDatablockMixin
 from .sequential import SequentialDatablockMixin
 from .tensorlike import TensorlikeDatablockMixin
-from .lazy import LazyDatablockMixin
 
 from .utils import fields_dict
 
@@ -10,7 +9,6 @@ class Datablock(
     TensorlikeDatablockMixin,
     SequentialDatablockMixin,
     CollateDatablockMixin,
-    LazyDatablockMixin,
 ):
     def __repr__(self):
         info = ", ".join(
