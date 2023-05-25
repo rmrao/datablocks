@@ -421,7 +421,7 @@ tests = ["pytest (>=4.6)"]
 name = "mypy"
 version = "1.3.0"
 description = "Optional static typing for Python"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -468,7 +468,7 @@ reports = ["lxml"]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -961,7 +961,7 @@ mpmath = ">=0.19"
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1121,4 +1121,4 @@ test = ["pytest (>=6.0.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c168de3dc69dcf72b089842518183cc1d03fca2dd0e6b0c6ff1fd9612aae1099"
+content-hash = "1df9ae42b54da7358f2c01b44af7399037ff7d8e98a134e08e78c4b2c309db15"

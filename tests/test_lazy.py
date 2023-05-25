@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 from timeit import default_timer as timer
+import functools
 
-from datablocks import Datablock, lazyproperty
+from datablocks import Datablock
 
 
 @dataclass(frozen=True, repr=False)
 class Foo(Datablock):
     bar: str = "ABCDE"
 
-    @lazyproperty
+    @functools.cached_property
     def baz(self) -> float:
         # Just picking a function that should be different on subsequent calls
         return timer()
