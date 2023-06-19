@@ -30,6 +30,16 @@ def collate_dense_tensors(
 class CollateDatablockMixin:
     batch_size: int = dataclasses.field(default=0, repr=False)
 
+    def unsqueeze(self):
+        """Convert an example to a batched example. Shorthand for:
+
+        batched = self.__class__.collate([self])
+
+        Note this is a helper method that does not have fully the same
+        functionality as torch.Tensor.unsqueeze.
+        """
+        return self.__class__.collate([self])
+
     @classmethod
     def collate(cls, samples: T.Sequence["CollateDatablockMixin"]):
         for sample in samples:
